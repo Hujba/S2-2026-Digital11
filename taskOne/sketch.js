@@ -61,11 +61,24 @@ function draw() {
     let nh3 = aquariumData[0].exps.nh3.curr;
     let nh4 = aquariumData[0].exps.nh4.curr;
 
+
     // Call your custom graphic widgets
     drawTempWidget(50, 120, temp);
     drawGaugeWidget(300, 120, "pH Level", ph, 6.0, 8.5);
     drawGaugeWidget(550, 120, "Ammonia (NH3)", nh3, 0.0, 0.05);
     drawGaugeWidget(50, 300, "Ammonia ion (NH4)", nh4, 0.0, 0.05);
+// alert for if ph is above 8
+      if (ph >= 8)
+      {
+        let alertX = 480;
+        let alertY = 140;
+        fill(225, 0, 0)
+        triangle(
+    alertX, alertY - 15,    
+    alertX - 15, alertY + 15, 
+    alertX + 15, alertY + 15
+  );
+      }
 
   } else {
     // Loading State
