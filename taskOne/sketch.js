@@ -68,7 +68,18 @@ function draw() {
     drawGaugeWidget(550, 120, "Ammonia (NH3)", nh3, 0.0, 0.05);
     drawGaugeWidget(50, 300, "Ammonia ion (NH4)", nh4, 0.0, 0.05);
 // alert for if ph is above 8
-      if (ph >= 8)
+      if (ph >= 8.2)
+      {
+        let alertX = 480;
+        let alertY = 140;
+        fill(225, 0, 0)
+        triangle(
+    alertX, alertY - 15,    
+    alertX - 15, alertY + 15, 
+    alertX + 15, alertY + 15
+  );
+      }
+      if (ph <= 6.5)
       {
         let alertX = 480;
         let alertY = 140;
