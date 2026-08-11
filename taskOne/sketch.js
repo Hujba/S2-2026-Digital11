@@ -45,7 +45,7 @@ function draw() {
   fill(255);
   textSize(24);
   textAlign(LEFT, TOP);
-  text("Fish Environment Dashboard", 30, 30);
+  text("Silver Perch Environment Dashboard", 30, 30);
 
   // Display connection status
   textSize(12);
