@@ -2,17 +2,14 @@
 // STUDENT TASK: Build a graphical dashboard for Seneye
 // ===================================================
 
-// Replace this with your teacher's Cloudflare Worker URL:
 const PROXY_URL = "https://seneye-proxy.ezankov.workers.dev/";
-
-// Toggle to true if you are working offline without network access
 const USE_OFFLINE_MOCK = false;
 
 let aquariumData = null;
 let lastUpdated = "";
+let isConnected = false;
 
 function preload() {
-  // Load initial data before setup() runs
   let endpoint = USE_OFFLINE_MOCK ? "sample-data.json" : PROXY_URL;
   aquariumData = loadJSON(endpoint, onDataLoaded, onError);
 }
@@ -20,7 +17,6 @@ function preload() {
 function setup() {
   createCanvas(800, 500);
   
-  // Refresh live data every 5 minutes (300,000 ms)
   if (!USE_OFFLINE_MOCK) {
     setInterval(() => {
       loadJSON(PROXY_URL, onDataLoaded, onError);
@@ -31,65 +27,51 @@ function setup() {
 function onDataLoaded(data) {
   aquariumData = data;
   lastUpdated = new Date().toLocaleTimeString();
+  isConnected = true;
   console.log("Data refreshed successfully:", data);
 }
 
 function onError(err) {
+  isConnected = false;
   console.error("Failed to load aquarium data. Check proxy URL or network.", err);
 }
 
 function draw() {
   background(20, 30, 45); // Dark blue aquarium background
 
-  // 1. Draw Title Header
+  // 1. Draw Title Header & Connection Status
   fill(255);
   textSize(24);
   textAlign(LEFT, TOP);
-  text("Silver Perch Environment Dashboard", 30, 30);
+  text("Silver Perch Environment Dashboard", 30, 25);
 
-  // Display connection status
+  // Connection indicator light
+  noStroke();
+  fill(isConnected ? color(0, 230, 118) : color(255, 77, 77));
+  ellipse(35, 65, 10, 10);
+
+  // Display connection status text & timestamp
   textSize(12);
-  fill(150, 200, 255);
-  text("Last updated: " + (lastUpdated || "Loading..."), 30, 65);
+  fill(180, 200, 220);
+  text((isConnected ? "Connected" : "Disconnected") + " | Last updated: " + (lastUpdated || "Loading..."), 50, 60);
 
   // 2. Render Dashboard Graphics
   if (aquariumData) {
-    // NOTE: Update these keys based on your actual Seneye JSON response structure!
-    // Example fields commonly found in sensor data:
-    let temp = aquariumData[0].exps.temperature.curr;
-    let ph = aquariumData[0].exps.ph.curr;
-    let nh3 = aquariumData[0].exps.nh3.curr;
-    let nh4 = aquariumData[0].exps.nh4.curr;
+    let rawTemp = aquariumData[0].exps.temperature.curr;
+    let rawPh = aquariumData[0].exps.ph.curr;
+    let rawNh3 = aquariumData[0].exps.nh3.curr;
+    let rawNh4 = aquariumData[0].exps.nh4.curr;
 
+    let temp = parseFloat(rawTemp);
+    let ph = parseFloat(rawPh);
+    let nh3 = parseFloat(rawNh3);
+    let nh4 = parseFloat(rawNh4);
 
-    // Call your custom graphic widgets
-    drawTempWidget(50, 120, temp);
-    drawGaugeWidget(300, 120, "pH Level", ph, 6.0, 8.5);
-    drawGaugeWidget(550, 120, "Ammonia (NH3)", nh3, 0.0, 0.05);
-    drawGaugeWidget(50, 300, "Ammonia ion (NH4)", nh4, 0.0, 0.05);
-// alert for if ph is above 8
-      if (ph >= 8.2)
-      {
-        let alertX = 480;
-        let alertY = 140;
-        fill(225, 0, 0)
-        triangle(
-    alertX, alertY - 15,    
-    alertX - 15, alertY + 15, 
-    alertX + 15, alertY + 15
-  );
-      }
-      if (ph <= 6.5)
-      {
-        let alertX = 480;
-        let alertY = 140;
-        fill(225, 0, 0)
-        triangle(
-    alertX, alertY - 15,    
-    alertX - 15, alertY + 15, 
-    alertX + 15, alertY + 15
-  );
-      }
+    // Render Modular Cards with Threshold Rules
+    drawTempWidget(50, 100, temp);
+    drawGaugeWidget(300, 100, "pH Level", ph, ph < 6.5 || ph > 8.2);
+    drawGaugeWidget(550, 100, "Ammonia (NH3)", nh3, nh3 > 0.05);
+    drawGaugeWidget(50, 280, "Ammonia ion (NH4)", nh4, false);
 
   } else {
     // Loading State
@@ -99,11 +81,14 @@ function draw() {
   }
 }
 
-// Example Widget Function: Temperature Card
+// Custom Graphic Widget: Temperature Card
 function drawTempWidget(x, y, tempVal) {
+  let isWarning = tempVal < 20.0 || tempVal > 28.0;
+
   // Background Card
   fill(35, 48, 68);
-  stroke(60, 80, 110);
+  stroke(isWarning ? color(255, 77, 77) : color(60, 80, 110));
+  strokeWeight(isWarning ? 2 : 1);
   rect(x, y, 200, 150, 10);
 
   // Label
@@ -112,16 +97,26 @@ function drawTempWidget(x, y, tempVal) {
   textSize(14);
   text("Water Temp", x + 15, y + 15);
 
-  // Value Display
-  fill(100, 220, 255);
+  // Value Display with dynamic color
+  fill(isWarning ? color(255, 77, 77) : color(100, 220, 255));
   textSize(36);
-  text(tempVal + "°C", x + 15, y + 50);
+  text(tempVal + "°C", x + 15, y + 55);
+
+  // Status Indicator
+  textSize(12);
+  fill(isWarning ? color(255, 77, 77) : color(0, 230, 118));
+  text(isWarning ? "⚠️ TEMP WARNING" : "✓ OPTIMAL", x + 15, y + 115);
+
+  if (isWarning) {
+    drawWarningIcon(x + 165, y + 25);
+  }
 }
 
-// Example Widget Function: Simple Bar Gauge
-function drawGaugeWidget(x, y, label, val, minVal, maxVal) {
+// Custom Graphic Widget: Gauge Card
+function drawGaugeWidget(x, y, label, val, isWarning) {
   fill(35, 48, 68);
-  stroke(60, 80, 110);
+  stroke(isWarning ? color(255, 77, 77) : color(60, 80, 110));
+  strokeWeight(isWarning ? 2 : 1);
   rect(x, y, 200, 150, 10);
 
   noStroke();
@@ -129,7 +124,29 @@ function drawGaugeWidget(x, y, label, val, minVal, maxVal) {
   textSize(14);
   text(label, x + 15, y + 15);
 
-  fill(255);
-  textSize(28);
-  text(val, x + 15, y + 50);
+  fill(isWarning ? color(255, 77, 77) : color(255));
+  textSize(32);
+  text(val, x + 15, y + 55);
+
+  // Status Indicator
+  textSize(12);
+  fill(isWarning ? color(255, 77, 77) : color(0, 230, 118));
+  text(isWarning ? "⚠️ ALERT LEVEL" : "✓ OPTIMAL", x + 15, y + 115);
+
+  if (isWarning) {
+    drawWarningIcon(x + 165, y + 25);
+  }
+}
+
+// Helper Function: Warning Triangle Icon
+function drawWarningIcon(cx, cy) {
+  push();
+  fill(255, 77, 77);
+  noStroke();
+  triangle(cx, cy - 10, cx - 10, cy + 8, cx + 10, cy + 8);
+  fill(20, 30, 45);
+  textSize(10);
+  textAlign(CENTER, CENTER);
+  text("!", cx, cy + 2);
+  pop();
 }
