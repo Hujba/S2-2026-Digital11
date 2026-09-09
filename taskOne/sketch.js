@@ -1,5 +1,5 @@
 // ===================================================
-// STUDENT TASK: Build a graphical dashboard for Seneye
+// Real-Time Aquarium Data Dashboard - p5.js
 // ===================================================
 
 const PROXY_URL = "https://seneye-proxy.ezankov.workers.dev/";
@@ -20,7 +20,7 @@ function setup() {
   if (!USE_OFFLINE_MOCK) {
     setInterval(() => {
       loadJSON(PROXY_URL, onDataLoaded, onError);
-    }, 300000);
+    }, 300000); // 5-minute refresh interval
   }
 }
 
@@ -37,108 +37,92 @@ function onError(err) {
 }
 
 function draw() {
-  background(20, 30, 45); // Dark blue aquarium background
+  background(20, 30, 45); // Dark aquarium background
 
-  // 1. Draw Title Header & Connection Status
-  fill(255);
-  textSize(24);
+  // 1. Header & System Connection Status
   textAlign(LEFT, TOP);
+  fill(255);
+  textSize(22);
   text("Silver Perch Environment Dashboard", 30, 25);
 
-  // Connection indicator light
+  // Connection Indicator Light
   noStroke();
   fill(isConnected ? color(0, 230, 118) : color(255, 77, 77));
   ellipse(35, 65, 10, 10);
 
-  // Display connection status text & timestamp
+  // Status & Timestamp Text
   textSize(12);
   fill(180, 200, 220);
   text((isConnected ? "Connected" : "Disconnected") + " | Last updated: " + (lastUpdated || "Loading..."), 50, 60);
 
-  // 2. Render Dashboard Graphics
-  if (aquariumData) {
-    let rawTemp = aquariumData[0].exps.temperature.curr;
-    let rawPh = aquariumData[0].exps.ph.curr;
-    let rawNh3 = aquariumData[0].exps.nh3.curr;
-    let rawNh4 = aquariumData[0].exps.nh4.curr;
+  // 2. Render Widgets
+  if (aquariumData && aquariumData[0] && aquariumData[0].exps) {
+    let exps = aquariumData[0].exps;
 
-    let temp = parseFloat(rawTemp);
-    let ph = parseFloat(rawPh);
-    let nh3 = parseFloat(rawNh3);
-    let nh4 = parseFloat(rawNh4);
+    // Extract numerical readings
+    let temp = parseFloat(exps.temperature?.curr || 0);
+    let ph = parseFloat(exps.ph?.curr || 0);
+    let nh3 = parseFloat(exps.nh3?.curr || 0);
+    let nh4 = parseFloat(exps.nh4?.curr || 0);
 
-    // Render Modular Cards with Threshold Rules
-    drawTempWidget(50, 100, temp);
-    drawGaugeWidget(300, 100, "pH Level", ph, ph < 6.5 || ph > 8.2);
-    drawGaugeWidget(550, 100, "Ammonia (NH3)", nh3, nh3 > 0.05);
-    drawGaugeWidget(50, 280, "Ammonia ion (NH4)", nh4, false);
+    // Parse API Status flags (converting string indicators to numbers)
+    let tempStatus = Number(exps.temperature?.status) === 1 || temp < 20.0 || temp > 28.0;
+    let phStatus = Number(exps.ph?.status) === 1 || ph < 6.8 || ph > 7.8;
+    let nh3Status = Number(exps.nh3?.status) === 1 || nh3 > 0.05;
+
+    // Render Modular Cards
+    drawWidget(30, 100, "Temperature", temp.toFixed(1) + " °C", "Safe: 22-26°C", tempStatus);
+    drawWidget(280, 100, "pH Level", ph.toFixed(2), "Safe: 6.8-7.8", phStatus);
+    drawWidget(530, 100, "Ammonia (NH3)", nh3.toFixed(3) + " mg/L", "Safe: < 0.02", nh3Status);
+    drawWidget(30, 280, "Ammonia Ion (NH4)", nh4.toFixed(3) + " mg/L", "Safe: < 0.05", false);
 
   } else {
-    // Loading State
+    // Loading State Fallback
     fill(255, 100, 100);
-    textSize(18);
+    textSize(16);
     text("Connecting to sensor stream...", 30, 120);
   }
 }
 
-// Custom Graphic Widget: Temperature Card
-function drawTempWidget(x, y, tempVal) {
-  let isWarning = tempVal < 20.0 || tempVal > 28.0;
-
-  // Background Card
+// Custom Graphic Widget: Modular Visual Card
+function drawWidget(x, y, label, valueStr, safeRangeStr, isWarning) {
+  push();
+  // Card Container
   fill(35, 48, 68);
   stroke(isWarning ? color(255, 77, 77) : color(60, 80, 110));
   strokeWeight(isWarning ? 2 : 1);
-  rect(x, y, 200, 150, 10);
+  rect(x, y, 230, 150, 10);
 
-  // Label
+  // Metric Label
   noStroke();
-  fill(180, 200, 220);
-  textSize(14);
-  text("Water Temp", x + 15, y + 15);
-
-  // Value Display with dynamic color
-  fill(isWarning ? color(255, 77, 77) : color(100, 220, 255));
-  textSize(36);
-  text(tempVal + "°C", x + 15, y + 55);
-
-  // Status Indicator
-  textSize(12);
-  fill(isWarning ? color(255, 77, 77) : color(0, 230, 118));
-  text(isWarning ? "⚠️ TEMP WARNING" : "✓ OPTIMAL", x + 15, y + 115);
-
-  if (isWarning) {
-    drawWarningIcon(x + 165, y + 25);
-  }
-}
-
-// Custom Graphic Widget: Gauge Card
-function drawGaugeWidget(x, y, label, val, isWarning) {
-  fill(35, 48, 68);
-  stroke(isWarning ? color(255, 77, 77) : color(60, 80, 110));
-  strokeWeight(isWarning ? 2 : 1);
-  rect(x, y, 200, 150, 10);
-
-  noStroke();
+  textAlign(LEFT, TOP);
   fill(180, 200, 220);
   textSize(14);
   text(label, x + 15, y + 15);
 
-  fill(isWarning ? color(255, 77, 77) : color(255));
-  textSize(32);
-  text(val, x + 15, y + 55);
+  // Parameter Value Display
+  fill(isWarning ? color(255, 77, 77) : color(100, 220, 255));
+  textSize(28);
+  text(valueStr, x + 15, y + 45);
 
-  // Status Indicator
+  // Safe Operational Target Range
+  fill(140, 160, 180);
+  textSize(11);
+  text("Target: " + safeRangeStr, x + 15, y + 85);
+
+  // Alert Status Footer
   textSize(12);
   fill(isWarning ? color(255, 77, 77) : color(0, 230, 118));
-  text(isWarning ? "⚠️ ALERT LEVEL" : "✓ OPTIMAL", x + 15, y + 115);
+  text(isWarning ? "⚠️ ALERT LEVEL" : "✓ OPTIMAL", x + 15, y + 118);
 
+  // Warning Icon Callout
   if (isWarning) {
-    drawWarningIcon(x + 165, y + 25);
+    drawWarningIcon(x + 200, y + 25);
   }
+  pop();
 }
 
-// Helper Function: Warning Triangle Icon
+// Helper Function: Warning Icon Callout
 function drawWarningIcon(cx, cy) {
   push();
   fill(255, 77, 77);
@@ -147,6 +131,6 @@ function drawWarningIcon(cx, cy) {
   fill(20, 30, 45);
   textSize(10);
   textAlign(CENTER, CENTER);
-  text("!", cx, cy + 2);
+  text("!", cx, cy + 1);
   pop();
 }
