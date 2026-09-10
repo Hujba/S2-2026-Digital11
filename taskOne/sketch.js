@@ -15,13 +15,18 @@ function preload() {
 }
 
 function setup() {
-  createCanvas(800, 500);
-  
+  createCanvas(windowWidth, windowHeight);
+  pixelDensity(1);
+
   if (!USE_OFFLINE_MOCK) {
     setInterval(() => {
       loadJSON(PROXY_URL, onDataLoaded, onError);
-    }, 300000); // 5-minute refresh interval
+    }, 300000);
   }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
 }
 
 function onDataLoaded(data) {
@@ -37,92 +42,92 @@ function onError(err) {
 }
 
 function draw() {
-  background(20, 30, 45); // Dark aquarium background
+  background(20, 30, 45);
 
-  // 1. Header & System Connection Status
+  const padding = width < 700 ? 16 : 24;
+  const gap = width < 700 ? 12 : 20;
+  const isMobile = width < 700;
+
   textAlign(LEFT, TOP);
   fill(255);
-  textSize(22);
-  text("Silver Perch Environment Dashboard", 30, 25);
+  textSize(isMobile ? 18 : 22);
+  text("Silver Perch Environment Dashboard", padding, padding);
 
-  // Connection Indicator Light
   noStroke();
   fill(isConnected ? color(0, 230, 118) : color(255, 77, 77));
-  ellipse(35, 65, 10, 10);
+  ellipse(padding + 5, padding + 40, isMobile ? 8 : 10, isMobile ? 8 : 10);
 
-  // Status & Timestamp Text
-  textSize(12);
+  textSize(isMobile ? 11 : 12);
   fill(180, 200, 220);
-  text((isConnected ? "Connected" : "Disconnected") + " | Last updated: " + (lastUpdated || "Loading..."), 50, 60);
+  text((isConnected ? "Connected" : "Disconnected") + " | Last updated: " + (lastUpdated || "Loading..."), padding + 18, padding + 35);
 
-  // 2. Render Widgets
   if (aquariumData && aquariumData[0] && aquariumData[0].exps) {
-    let exps = aquariumData[0].exps;
+    const exps = aquariumData[0].exps;
+    const temp = parseFloat(exps.temperature?.curr || 0);
+    const ph = parseFloat(exps.ph?.curr || 0);
+    const nh3 = parseFloat(exps.nh3?.curr || 0);
+    const nh4 = parseFloat(exps.nh4?.curr || 0);
 
-    // Extract numerical readings
-    let temp = parseFloat(exps.temperature?.curr || 0);
-    let ph = parseFloat(exps.ph?.curr || 0);
-    let nh3 = parseFloat(exps.nh3?.curr || 0);
-    let nh4 = parseFloat(exps.nh4?.curr || 0);
+    const tempStatus = Number(exps.temperature?.status) === 1 || temp < 20.0 || temp > 28.0;
+    const phStatus = Number(exps.ph?.status) === 1 || ph < 6.8 || ph > 7.8;
+    const nh3Status = Number(exps.nh3?.status) === 1 || nh3 > 0.05;
 
-    // Parse API Status flags (converting string indicators to numbers)
-    let tempStatus = Number(exps.temperature?.status) === 1 || temp < 20.0 || temp > 28.0;
-    let phStatus = Number(exps.ph?.status) === 1 || ph < 6.8 || ph > 7.8;
-    let nh3Status = Number(exps.nh3?.status) === 1 || nh3 > 0.05;
+    let cardWidth = isMobile ? width - padding * 2 : (width - padding * 3) / 2;
+    let cardHeight = isMobile ? 140 : 150;
+    let cardsPerRow = isMobile ? 1 : 2;
+    let totalRowWidth = cardWidth * cardsPerRow + gap * (cardsPerRow - 1);
+    let startX = (width - totalRowWidth) / 2;
+    let rowOneY = padding + 70;
+    let rowTwoY = rowOneY + cardHeight + gap;
 
-    // Render Modular Cards
-    drawWidget(30, 100, "Temperature", temp.toFixed(1) + " °C", "Safe: 22-26°C", tempStatus);
-    drawWidget(280, 100, "pH Level", ph.toFixed(2), "Safe: 6.8-7.8", phStatus);
-    drawWidget(530, 100, "Ammonia (NH3)", nh3.toFixed(3) + " mg/L", "Safe: < 0.02", nh3Status);
-    drawWidget(30, 280, "Ammonia Ion (NH4)", nh4.toFixed(3) + " mg/L", "Safe: < 0.05", false);
-
+    drawWidget(startX, rowOneY, cardWidth, cardHeight, "Temperature", temp.toFixed(1) + " °C", "Safe: 22-26°C", tempStatus, isMobile);
+    if (!isMobile) {
+      drawWidget(startX + cardWidth + gap, rowOneY, cardWidth, cardHeight, "pH Level", ph.toFixed(2), "Safe: 6.8-7.8", phStatus, isMobile);
+      drawWidget(startX, rowTwoY, cardWidth, cardHeight, "Ammonia (NH3)", nh3.toFixed(3) + " mg/L", "Safe: < 0.02", nh3Status, isMobile);
+      drawWidget(startX + cardWidth + gap, rowTwoY, cardWidth, cardHeight, "Ammonia Ion (NH4)", nh4.toFixed(3) + " mg/L", "Safe: < 0.05", false, isMobile);
+    } else {
+      drawWidget(startX, rowOneY + cardHeight + gap, cardWidth, cardHeight, "pH Level", ph.toFixed(2), "Safe: 6.8-7.8", phStatus, isMobile);
+      drawWidget(startX, rowOneY + (cardHeight + gap) * 2, cardWidth, cardHeight, "Ammonia (NH3)", nh3.toFixed(3) + " mg/L", "Safe: < 0.02", nh3Status, isMobile);
+      drawWidget(startX, rowOneY + (cardHeight + gap) * 3, cardWidth, cardHeight, "Ammonia Ion (NH4)", nh4.toFixed(3) + " mg/L", "Safe: < 0.05", false, isMobile);
+    }
   } else {
-    // Loading State Fallback
     fill(255, 100, 100);
     textSize(16);
-    text("Connecting to sensor stream...", 30, 120);
+    text("Connecting to sensor stream...", padding, padding + 70);
   }
 }
 
-// Custom Graphic Widget: Modular Visual Card
-function drawWidget(x, y, label, valueStr, safeRangeStr, isWarning) {
+function drawWidget(x, y, w, h, label, valueStr, safeRangeStr, isWarning, isMobile) {
   push();
-  // Card Container
   fill(35, 48, 68);
   stroke(isWarning ? color(255, 77, 77) : color(60, 80, 110));
   strokeWeight(isWarning ? 2 : 1);
-  rect(x, y, 230, 150, 10);
+  rect(x, y, w, h, 10);
 
-  // Metric Label
   noStroke();
   textAlign(LEFT, TOP);
   fill(180, 200, 220);
-  textSize(14);
+  textSize(isMobile ? 12 : 14);
   text(label, x + 15, y + 15);
 
-  // Parameter Value Display
   fill(isWarning ? color(255, 77, 77) : color(100, 220, 255));
-  textSize(28);
-  text(valueStr, x + 15, y + 45);
+  textSize(isMobile ? 22 : 28);
+  text(valueStr, x + 15, y + 40);
 
-  // Safe Operational Target Range
   fill(140, 160, 180);
-  textSize(11);
-  text("Target: " + safeRangeStr, x + 15, y + 85);
+  textSize(isMobile ? 10 : 11);
+  text("Target: " + safeRangeStr, x + 15, y + 72);
 
-  // Alert Status Footer
-  textSize(12);
+  textSize(isMobile ? 11 : 12);
   fill(isWarning ? color(255, 77, 77) : color(0, 230, 118));
-  text(isWarning ? "⚠️ ALERT LEVEL" : "✓ OPTIMAL", x + 15, y + 118);
+  text(isWarning ? "⚠️ ALERT LEVEL" : "✓ OPTIMAL", x + 15, y + h - 32);
 
-  // Warning Icon Callout
   if (isWarning) {
-    drawWarningIcon(x + 200, y + 25);
+    drawWarningIcon(x + w - 18, y + 22);
   }
   pop();
 }
 
-// Helper Function: Warning Icon Callout
 function drawWarningIcon(cx, cy) {
   push();
   fill(255, 77, 77);
