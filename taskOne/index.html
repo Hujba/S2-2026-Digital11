@@ -7,37 +7,38 @@
   <title>Aquarium Data Dashboard</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <style>
-    :root {
-      color-scheme: dark;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
+    /* Remove all page whitespace and force the sketch to fit the viewport exactly */
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      min-height: 100%;
-      background-color: #121212;
-      font-family: Arial, sans-serif;
-      overflow-x: hidden;
+      margin: 0 !important;
+      padding: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 100vh !important;
+      min-height: 100dvh !important;
+      overflow: hidden !important;
+      background-color: #141e2d !important;
     }
 
     body {
-      display: block;
+      position: relative !important;
     }
 
+    /* Standard p5 canvas container fix */
     canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
+      display: block !important;
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      max-width: none !important;
+      max-height: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
     }
   </style>
 </head>
 <body>
-  <!-- p5.js canvas attaches here -->
   <script src="sketch.js"></script>
 </body>
 </html>

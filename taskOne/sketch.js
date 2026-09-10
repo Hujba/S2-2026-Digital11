@@ -44,22 +44,23 @@ function onError(err) {
 function draw() {
   background(20, 30, 45);
 
-  const padding = width < 700 ? 16 : 24;
-  const gap = width < 700 ? 12 : 20;
-  const isMobile = width < 700;
+  const isMobile = width < 768;
+  const padding = isMobile ? 16 : 32;
+  const gap = isMobile ? 12 : 20;
 
+  // Header Section
   textAlign(LEFT, TOP);
   fill(255);
-  textSize(isMobile ? 18 : 22);
+  textSize(isMobile ? 20 : 26);
   text("Silver Perch Environment Dashboard", padding, padding);
 
   noStroke();
   fill(isConnected ? color(0, 230, 118) : color(255, 77, 77));
-  ellipse(padding + 5, padding + 40, isMobile ? 8 : 10, isMobile ? 8 : 10);
+  ellipse(padding + 6, padding + 42, isMobile ? 8 : 10, isMobile ? 8 : 10);
 
-  textSize(isMobile ? 11 : 12);
+  textSize(isMobile ? 12 : 14);
   fill(180, 200, 220);
-  text((isConnected ? "Connected" : "Disconnected") + " | Last updated: " + (lastUpdated || "Loading..."), padding + 18, padding + 35);
+  text((isConnected ? "Connected" : "Disconnected") + " | Last updated: " + (lastUpdated || "Loading..."), padding + 20, padding + 37);
 
   if (aquariumData && aquariumData[0] && aquariumData[0].exps) {
     const exps = aquariumData[0].exps;
@@ -72,28 +73,35 @@ function draw() {
     const phStatus = Number(exps.ph?.status) === 1 || ph < 6.8 || ph > 7.8;
     const nh3Status = Number(exps.nh3?.status) === 1 || nh3 > 0.05;
 
-    let cardWidth = isMobile ? width - padding * 2 : (width - padding * 3) / 2;
-    let cardHeight = isMobile ? 140 : 150;
-    let cardsPerRow = isMobile ? 1 : 2;
-    let totalRowWidth = cardWidth * cardsPerRow + gap * (cardsPerRow - 1);
-    let startX = (width - totalRowWidth) / 2;
-    let rowOneY = padding + 70;
-    let rowTwoY = rowOneY + cardHeight + gap;
+    // Define Grid Items
+    const items = [
+      { label: "Temperature", val: temp.toFixed(1) + " °C", safe: "Safe: 22-26°C", warn: tempStatus },
+      { label: "pH Level", val: ph.toFixed(2), safe: "Safe: 6.8-7.8", warn: phStatus },
+      { label: "Ammonia (NH3)", val: nh3.toFixed(3) + " mg/L", safe: "Safe: < 0.02", warn: nh3Status },
+      { label: "Ammonia Ion (NH4)", val: nh4.toFixed(3) + " mg/L", safe: "Safe: < 0.05", warn: false }
+    ];
 
-    drawWidget(startX, rowOneY, cardWidth, cardHeight, "Temperature", temp.toFixed(1) + " °C", "Safe: 22-26°C", tempStatus, isMobile);
-    if (!isMobile) {
-      drawWidget(startX + cardWidth + gap, rowOneY, cardWidth, cardHeight, "pH Level", ph.toFixed(2), "Safe: 6.8-7.8", phStatus, isMobile);
-      drawWidget(startX, rowTwoY, cardWidth, cardHeight, "Ammonia (NH3)", nh3.toFixed(3) + " mg/L", "Safe: < 0.02", nh3Status, isMobile);
-      drawWidget(startX + cardWidth + gap, rowTwoY, cardWidth, cardHeight, "Ammonia Ion (NH4)", nh4.toFixed(3) + " mg/L", "Safe: < 0.05", false, isMobile);
-    } else {
-      drawWidget(startX, rowOneY + cardHeight + gap, cardWidth, cardHeight, "pH Level", ph.toFixed(2), "Safe: 6.8-7.8", phStatus, isMobile);
-      drawWidget(startX, rowOneY + (cardHeight + gap) * 2, cardWidth, cardHeight, "Ammonia (NH3)", nh3.toFixed(3) + " mg/L", "Safe: < 0.02", nh3Status, isMobile);
-      drawWidget(startX, rowOneY + (cardHeight + gap) * 3, cardWidth, cardHeight, "Ammonia Ion (NH4)", nh4.toFixed(3) + " mg/L", "Safe: < 0.05", false, isMobile);
+    // Responsive Grid Layout Calculation
+    const cols = isMobile ? 1 : 2;
+    const startY = padding + (isMobile ? 70 : 85);
+    
+    const availableWidth = width - (padding * 2);
+    const cardWidth = (availableWidth - (gap * (cols - 1))) / cols;
+    const cardHeight = isMobile ? 130 : 160;
+
+    for (let i = 0; i < items.length; i++) {
+      let col = i % cols;
+      let row = floor(i / cols);
+
+      let x = padding + col * (cardWidth + gap);
+      let y = startY + row * (cardHeight + gap);
+
+      drawWidget(x, y, cardWidth, cardHeight, items[i].label, items[i].val, items[i].safe, items[i].warn, isMobile);
     }
   } else {
     fill(255, 100, 100);
     textSize(16);
-    text("Connecting to sensor stream...", padding, padding + 70);
+    text("Connecting to sensor stream...", padding, padding + 80);
   }
 }
 
@@ -102,28 +110,28 @@ function drawWidget(x, y, w, h, label, valueStr, safeRangeStr, isWarning, isMobi
   fill(35, 48, 68);
   stroke(isWarning ? color(255, 77, 77) : color(60, 80, 110));
   strokeWeight(isWarning ? 2 : 1);
-  rect(x, y, w, h, 10);
+  rect(x, y, w, h, 12);
 
   noStroke();
   textAlign(LEFT, TOP);
   fill(180, 200, 220);
   textSize(isMobile ? 12 : 14);
-  text(label, x + 15, y + 15);
+  text(label, x + 16, y + 16);
 
   fill(isWarning ? color(255, 77, 77) : color(100, 220, 255));
   textSize(isMobile ? 22 : 28);
-  text(valueStr, x + 15, y + 40);
+  text(valueStr, x + 16, y + (isMobile ? 38 : 44));
 
   fill(140, 160, 180);
-  textSize(isMobile ? 10 : 11);
-  text("Target: " + safeRangeStr, x + 15, y + 72);
+  textSize(isMobile ? 11 : 12);
+  text("Target: " + safeRangeStr, x + 16, y + (isMobile ? 70 : 82));
 
   textSize(isMobile ? 11 : 12);
   fill(isWarning ? color(255, 77, 77) : color(0, 230, 118));
-  text(isWarning ? "⚠️ ALERT LEVEL" : "✓ OPTIMAL", x + 15, y + h - 32);
+  text(isWarning ? "⚠️ ALERT LEVEL" : "✓ OPTIMAL", x + 16, y + h - 28);
 
   if (isWarning) {
-    drawWarningIcon(x + w - 18, y + 22);
+    drawWarningIcon(x + w - 24, y + 24);
   }
   pop();
 }
