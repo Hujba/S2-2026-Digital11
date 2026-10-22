@@ -2,8 +2,10 @@ from datetime import date
 import requests
 barcode = 3017624010701
 url = f"https://world.openfoodfacts.net/api/v2/product/{barcode}"
-response = requests.get(url)
-
+headers = {
+   "User-Agent": "MyBarcodeApp/1.0 lamhujb01@pedarecc.sa.edu.au"
+}
+response = requests.get(url, headers=headers)
 data = response.json()
 product_name=data.get("product", {}).get("product_name", "Product Unknown")
 product_type=data.get("product", {}).get("product_type", "Product Unknown")
